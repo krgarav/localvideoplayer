@@ -10,8 +10,15 @@ import {
 } from "react-konva";
 import useImage from "use-image";
 import Tools from "./Tools";
+import DraggableSVG from "./Draggable";
 
-const DraggableResizableImage = ({ image, isSelected, onSelect, onChange, onDelete }) => {
+const DraggableResizableImage = ({
+  image,
+  isSelected,
+  onSelect,
+  onChange,
+  onDelete,
+}) => {
   const [img] = useImage(image.src);
   const imageRef = useRef();
   const transformerRef = useRef();
@@ -87,7 +94,6 @@ const DraggableResizableImage = ({ image, isSelected, onSelect, onChange, onDele
   );
 };
 
-
 const ScribbleCanvas = ({ height, width, x, y }) => {
   const [tool, setTool] = useState("pen"); // Current tool state
   const [lines, setLines] = useState([]); // Stores drawn lines
@@ -96,6 +102,7 @@ const ScribbleCanvas = ({ height, width, x, y }) => {
   const isDrawing = useRef(false);
   const stageRef = useRef();
   const dragUrl = useRef();
+  const [selectedImage, setSelectedImage] = useState(null);
 
   // Handle drawing with pen/eraser
   const handleMouseDown = (e) => {
@@ -132,23 +139,22 @@ const ScribbleCanvas = ({ height, width, x, y }) => {
     stageRef.current.setPointersPositions(e);
     const pos = stageRef.current.getPointerPosition();
 
-    // ✅ Retrieve the full data from dragUrl.current
-    const draggedData = JSON.parse(dragUrl.current);
-
-    setIcons((prevIcons) => [
-      ...prevIcons,
-      {
-        id: prevIcons.length, // Assign a unique ID
-        x: pos.x,
-        y: pos.y,
-        src: draggedData.src,
-        width: 80,
-        height: 80,
-        question: draggedData.question,
-        mark: draggedData.mark,
-        timestamp: draggedData.timestamp,
-      },
-    ]);
+    // ✅ Retrieve the image data from `DraggableSVG`
+    // const draggedImage = e.dataTransfer.getData("image/png");
+    console.log(draggedImage);
+    if (draggedImage) {
+      setIcons((prevIcons) => [
+        ...prevIcons,
+        {
+          id: prevIcons.length,
+          x: pos.x,
+          y: pos.y,
+          src: draggedImage, // ✅ Using the converted image from DraggableSVG
+          width: 100,
+          height: 100,
+        },
+      ]);
+    }
   };
 
   // Toolbar Buttons
@@ -184,48 +190,16 @@ const ScribbleCanvas = ({ height, width, x, y }) => {
         Drag these images into the canvas:
         <br />
         {/* ✅ Wrap Entire Div for Dragging */}
-        <div
-          draggable="true"
-          onDragStart={(e) => {
-            dragUrl.current = JSON.stringify({
-              src: "/check.png",
-              question: 5,
-              mark: 20,
-              timestamp: "10:44:47",
-            });
-          }}
-          // style={{
-          //   display: "inline-block",
-          //   padding: "10px",
-          //   border: "1px solid gray",
-          //   borderRadius: "5px",
-          //   cursor: "grab",
-          //   background: "white",
-          // }}
-        >
-          {/* Icon Image */}
-          <img
-            src="/check.png"
-            alt="icon"
-            width="50"
-            style={{ display: "block", margin: "auto" }}
-          />
-
-          {/* Allotted Marks and Question */}
-          <div className="mt-2 text-center text-xl font-semibold text-gray-700">
-            <span className="mr-1">{`Q5`}</span>→
-            <span
-              className={`ml-1 inline-flex min-w-[1.5rem] items-center justify-center font-extrabold rounded-full bg-gray-50 p-1`}
-            >
-              {`20`}
-            </span>
-          </div>
-
-          {/* Timestamp */}
-          <div className="mt-1 text-center text-md font-extrabold italic text-gray-700 opacity-75 text" style={{color: "gray"}}>
-            {"10:44:47"}
-          </div>
-        </div>
+        <DraggableSVG
+          imageUrl={"/check.png"}
+          setSelectedImage={setSelectedImage}
+          selectedImage={selectedImage}
+        />
+        <DraggableSVG
+          imageUrl={"/close.png"}
+          setSelectedImage={setSelectedImage}
+          selectedImage={selectedImage}
+        />
       </div>
 
       {/* Scribble Canvas Positioned Exactly Over the Image */}
