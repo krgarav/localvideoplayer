@@ -11,20 +11,13 @@ import {
 import useImage from "use-image";
 import Tools from "./Tools";
 
-const DraggableResizableImage = ({
-  image,
-  isSelected,
-  onSelect,
-  onChange,
-  onDelete,
-}) => {
+const DraggableResizableImage = ({ image, isSelected, onSelect, onChange, onDelete }) => {
   const [img] = useImage(image.src);
   const imageRef = useRef();
   const transformerRef = useRef();
 
-  // Apply Transformer when selected
   React.useEffect(() => {
-    if (isSelected) {
+    if (isSelected && transformerRef.current && imageRef.current) {
       transformerRef.current.nodes([imageRef.current]);
       transformerRef.current.getLayer().batchDraw();
     }
@@ -33,11 +26,12 @@ const DraggableResizableImage = ({
   return (
     <>
       <Group>
+        {/* ✅ Image */}
         <Image
           image={img}
           x={image.x}
           y={image.y}
-          draggable={true}
+          draggable
           ref={imageRef}
           width={image.width || 100}
           height={image.height || 100}
@@ -46,49 +40,53 @@ const DraggableResizableImage = ({
           onDragEnd={(e) => {
             onChange({ ...image, x: e.target.x(), y: e.target.y() });
           }}
-          onTransformEnd={(e) => {
-            const node = imageRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-
-            // Update state with new width/height and reset scale
-            onChange({
-              ...image,
-              x: node.x(),
-              y: node.y(),
-              width: node.width() * scaleX,
-              height: node.height() * scaleY,
-              scaleX: 1,
-              scaleY: 1, // Reset scale after applying new width and height
-            });
-
-            node.scaleX(1);
-            node.scaleY(1);
-          }}
         />
-        {/* Delete Button (Cross) */}
+
+        {/* ✅ Question and Marks */}
+        <Text
+          text={`Q${image.question} → ${image.mark}`}
+          fontSize={14}
+          x={image.x + 5}
+          y={image.y + image.height + 5}
+          fill="black"
+          fontStyle="bold"
+        />
+
+        {/* ✅ Timestamp */}
+        <Text
+          text={image.timestamp || "No Timestamp"}
+          fontSize={12}
+          x={image.x + 5}
+          y={image.y + image.height + 20}
+          fill="gray"
+          italic
+        />
+
+        {/* ✅ Delete Button */}
         {isSelected && (
           <Text
             text="❌"
-            fontSize={22}
-            x={image.x + (image.width || 100) - 15} // Position top-right of image
+            fontSize={20}
+            x={image.x + image.width - 15}
             y={image.y - 25}
             fill="red"
             fontStyle="bold"
             onClick={onDelete}
             onTap={onDelete}
-            hitStrokeWidth={30} // Increase hit area
-            align="center"
-            draggable={false} // Prevent accidental drag
-            stroke="white" // Makes it more visible on dark backgrounds
-            strokeWidth={3} // Outline effect for visibility
+            hitStrokeWidth={30}
+            draggable={false}
+            stroke="white"
+            strokeWidth={3}
           />
         )}
       </Group>
+
+      {/* ✅ Transformer for Resizing */}
       {isSelected && <Transformer ref={transformerRef} />}
     </>
   );
 };
+
 
 const ScribbleCanvas = ({ height, width, x, y }) => {
   const [tool, setTool] = useState("pen"); // Current tool state
@@ -129,21 +127,26 @@ const ScribbleCanvas = ({ height, width, x, y }) => {
     isDrawing.current = false;
   };
 
-  // Handle drop event
   const handleDrop = (e) => {
     e.preventDefault();
     stageRef.current.setPointersPositions(e);
-
     const pos = stageRef.current.getPointerPosition();
+
+    // ✅ Retrieve the full data from dragUrl.current
+    const draggedData = JSON.parse(dragUrl.current);
 
     setIcons((prevIcons) => [
       ...prevIcons,
       {
+        id: prevIcons.length, // Assign a unique ID
         x: pos.x,
         y: pos.y,
-        src: dragUrl.current, // Ensure the correct image URL is used
-        width: 100,
-        height: 100,
+        src: draggedData.src,
+        width: 80,
+        height: 80,
+        question: draggedData.question,
+        mark: draggedData.mark,
+        timestamp: draggedData.timestamp,
       },
     ]);
   };
@@ -180,24 +183,49 @@ const ScribbleCanvas = ({ height, width, x, y }) => {
       <div>
         Drag these images into the canvas:
         <br />
-        <img
-          alt="star"
-          src="/blank.jpg"
+        {/* ✅ Wrap Entire Div for Dragging */}
+        <div
           draggable="true"
-          width="50"
           onDragStart={(e) => {
-            dragUrl.current = e.target.src;
+            dragUrl.current = JSON.stringify({
+              src: "/check.png",
+              question: 5,
+              mark: 20,
+              timestamp: "10:44:47",
+            });
           }}
-          style={{ marginRight: 10, cursor: "grab" }}
-        />
-        <img
-          alt="heart"
-          src="/check.png"
-          draggable="true"
-          width="50"
-          onDragStart={(e) => (dragUrl.current = e.target.src)}
-          style={{ cursor: "grab" }}
-        />
+          // style={{
+          //   display: "inline-block",
+          //   padding: "10px",
+          //   border: "1px solid gray",
+          //   borderRadius: "5px",
+          //   cursor: "grab",
+          //   background: "white",
+          // }}
+        >
+          {/* Icon Image */}
+          <img
+            src="/check.png"
+            alt="icon"
+            width="50"
+            style={{ display: "block", margin: "auto" }}
+          />
+
+          {/* Allotted Marks and Question */}
+          <div className="mt-2 text-center text-xl font-semibold text-gray-700">
+            <span className="mr-1">{`Q5`}</span>→
+            <span
+              className={`ml-1 inline-flex min-w-[1.5rem] items-center justify-center font-extrabold rounded-full bg-gray-50 p-1`}
+            >
+              {`20`}
+            </span>
+          </div>
+
+          {/* Timestamp */}
+          <div className="mt-1 text-center text-md font-extrabold italic text-gray-700 opacity-75 text" style={{color: "gray"}}>
+            {"10:44:47"}
+          </div>
+        </div>
       </div>
 
       {/* Scribble Canvas Positioned Exactly Over the Image */}
